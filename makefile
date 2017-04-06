@@ -5,8 +5,8 @@ DOC_DIR = doc
 DEPEND_DIR = depend
 TEST_DIR = test
 
-TARGET = libluna-2.0.0-alpha.so
-TARGET_LINK = libluna.so
+TARGET =
+TARGET_LINK =
 
 VERSION_MAJOR = 2
 VERSION_MINOR = 0
