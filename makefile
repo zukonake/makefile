@@ -69,4 +69,4 @@ doc :
 	@mkdir -p $(DOC_DIR)
 	doxygen $(DOXYFILE)
 
--include $(subst $(OBJ_DIR)/,,$(patsubst %.o,%.d,$(OBJ_FILES)))
+-include $(subst $(OBJ_DIR)/,$(DEPEND_DIR),$(patsubst %.o,%.d,$(OBJ_FILES)))
