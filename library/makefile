@@ -27,7 +27,7 @@ STD = --std=c++11
 INCLUDES = -I $(SOURCE_DIR) -I $(INCLUDE_DIR)
 LDLIBS = 
 LDFLAGS = $(INCLUDES) $(STD) -shared -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS) -L $(LIB_DIR) $(VERSION_FLAGS)
-CXXLAGS = $(INCLUDES) $(STD) -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS) $(VERSION_FLAGS)
+CXXFLAGS = $(INCLUDES) $(STD) -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS) $(VERSION_FLAGS)
 
 PREFIX = /usr/lib
 DOXYFILE = Doxyfile
@@ -47,16 +47,17 @@ $(OBJ_DIR)/%.o : $$(shell find $(SOURCE_DIR) -type f -name %.cpp)
 
 install: $(TARGET)
 	install -m 755 $(TARGET) $(PREFIX)/$(TARGET)
-	ln -sf $(PREFIX)/$(TARGET) $(PREXIX)/$(TARGET_LINK)
+	ln -sf $(PREFIX)/$(TARGET) $(PREFIX)/$(TARGET_LINK)
 
 uninstall:
 	$(RM) -f $(PREFIX)/$(TARGET) $(PREFIX)/$(TARGET_LINK)
 
 clean :
 	$(RM) -r $(OBJ_DIR) $(DEPEND_DIR) $(TARGET) $(DOC_DIR)
+	$(MAKE) -C ./$(TEST_DIR) clean
 
-test :
-	make -C ./$(TEST_DIR)
+test : $(OBJ_FILES)
+	$(MAKE) -C ./$(TEST_DIR)
 
 doc :
 	@mkdir -p $(DOC_DIR)
