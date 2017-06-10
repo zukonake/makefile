@@ -1,6 +1,5 @@
 SOURCE_DIR = src
 OBJ_DIR = bin
-DOC_DIR = doc
 DEPEND_DIR = depend
 INCLUDE_DIR = include
 LIB_DIR = lib
@@ -12,22 +11,42 @@ VERSION_MAJOR = 0
 VERSION_MINOR = 0
 VERSION_PATCH = 0
 
-BASE_NAME = projectname
+BASE_NAME = sampleLibrary
 TARGET = lib$(BASE_NAME)-$(VERSION_MAJOR)-$(VERSION_MINOR)-$(VERSION_PATCH)-$(VERSION_STAGE).so
 TARGET_LINK = lib$(BASE_NAME).so
-BASE_NAME_DEFINE = $(shell echo $(BASE_NAME) | tr '[:lower:]' '[:upper:]')
+BASE_NAME_DEFINE = $(subst -,_,$(shell echo $(BASE_NAME) | tr '[:lower:]' '[:upper:]'))
 
 CPP_FILES = $(shell find $(SOURCE_DIR) -type f -name "*.cpp" -printf '%p ')
-OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(CPP_FILES))))
+OBJ_FILES = $(subst $(SOURCE_DIR),$(OBJ_DIR),$(patsubst %.cpp,%.o,$(CPP_FILES)))
 
 VERSION_FLAGS=-D$(BASE_NAME_DEFINE)_VERSION_STAGE="$(VERSION_STAGE)" -D$(BASE_NAME_DEFINE)_VERSION_MAJOR="$(VERSION_MAJOR)" -D$(BASE_NAME_DEFINE)_VERSION_MINOR="$(VERSION_MINOR)" -D$(BASE_NAME_DEFINE)_VERSION_PATCH="$(VERSION_PATCH)"
-DEBUG_FLAGS = -g -O0 -DDEBUG
-WARNING_FLAGS = -Wall -Wextra
-STD = --std=c++11
+CXX = clang++
+DEBUG_FLAGS = -g -O0
+WARNING_FLAGS = \
+	-ferror-limit=5 \
+	-Werror \
+	-Wall \
+	-Wextra \
+	-Wwrite-strings \
+	-Winit-self \
+	-Wcast-align \
+	-Wcast-qual \
+	-Wold-style-cast \
+	-Wpointer-arith \
+	-Wstrict-aliasing \
+	-Wformat=2 \
+	-Wuninitialized \
+	-Wmissing-declarations \
+	-Woverloaded-virtual \
+	-Wnon-virtual-dtor \
+	-Wctor-dtor-privacy \
+	-Wno-long-long \
+	-Weffc++
+STD = -std=c++14 -pedantic
 INCLUDES = -I $(SOURCE_DIR) -I $(INCLUDE_DIR)
-LDLIBS = 
-LDFLAGS = $(INCLUDES) $(STD) -shared -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS) -L $(LIB_DIR) $(VERSION_FLAGS)
-CXXFLAGS = $(INCLUDES) $(STD) -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS) $(VERSION_FLAGS)
+LDLIBS = -lsampleLibrary
+LDFLAGS = $(INCLUDES) $(STD) -shared -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS) -L $(LIB_DIR) $(LDLIBS)
+CXXFLAGS = $(INCLUDES) $(STD) -fPIC $(WARNING_FLAGS) $(DEBUG_FLAGS)
 
 PREFIX = /usr/lib
 DOXYFILE = Doxyfile
@@ -37,13 +56,14 @@ DOXYFILE = Doxyfile
 $(TARGET) : $(OBJ_FILES)
 	$(CXX) $(LDFLAGS) $(OBJ_FILES) -o $@
 
-.SECONDEXPANSION:
-$(OBJ_DIR)/%.o : $$(shell find $(SOURCE_DIR) -type f -name %.cpp)
-	@mkdir -p $(OBJ_DIR)
-	@mkdir -p $(DEPEND_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-	$(CXX) $(CXXFLAGS) -MM $< > $(DEPEND_DIR)/$*.d
-	@sed -i '1s/^/$(OBJ_DIR)\//' $(DEPEND_DIR)/$*.d
+$(OBJ_DIR)/%.o : $(SOURCE_DIR)/%.cpp $(DEPEND_DIR)/%.d
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $(SOURCE_DIR)/$*.cpp -o $@
+
+$(DEPEND_DIR)/%.d : $(SOURCE_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -MM $< > $@
+	@sed -i "1s~^~$(subst $(DEPEND_DIR),$(OBJ_DIR),$(dir $@))~" $@
 
 install: $(TARGET)
 	install -m 755 $(TARGET) $(PREFIX)/$(TARGET)
@@ -63,4 +83,4 @@ doc :
 	@mkdir -p $(DOC_DIR)
 	doxygen $(DOXYFILE)
 
--include $(subst $(OBJ_DIR)/,$(DEPEND_DIR)/,$(patsubst %.o,%.d,$(OBJ_FILES)))
+-include $(subst $(OBJ_DIR),$(DEPEND_DIR),$(patsubst %.o,%.d,$(OBJ_FILES)))

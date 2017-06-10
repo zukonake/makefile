@@ -1,43 +1,63 @@
 SOURCE_DIR = .
 OBJ_DIR = bin
 DEPEND_DIR = depend
+INCLUDE_DIR = include
 EXTERNAL_DIR = ..
 EXTERNAL_SOURCE_DIR = $(EXTERNAL_DIR)/src
 EXTERNAL_OBJ_DIR = $(EXTERNAL_DIR)/bin
 INCLUDE_DIR = $(EXTERNAL_DIR)/include
 LIB_DIR = lib
 
-TEST_DIR = test
-
-TARGET = test
+TARGET = sampleApplication
 
 CPP_FILES = $(shell find $(SOURCE_DIR) -type f -name "*.cpp" -printf '%p ')
+OBJ_FILES = $(subst $(SOURCE_DIR),$(OBJ_DIR),$(patsubst %.cpp,%.o,$(CPP_FILES)))
 EXTERNAL_CPP_FILES = $(shell find $(EXTERNAL_SOURCE_DIR) -type f -name "*.cpp" -printf '%p ')
-OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(CPP_FILES))))
-EXTERNAL_OBJ_FILES = $(addprefix $(EXTERNAL_OBJ_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(EXTERNAL_CPP_FILES))))
+EXTERNAL_OBJ_FILES = $(subst $(EXTERNAL_SOURCE_DIR),$(EXTERNAL_OBJ_DIR),$(patsubst %.cpp,%.o,$(EXTERNAL_CPP_FILES)))
 
-DEBUG_FLAGS = -g -O0 -DDEBUG
-WARNING_FLAGS = -Wall -Wextra
-STD = --std=c++11
+CXX = clang++
+DEBUG_FLAGS = -g -O0
+WARNING_FLAGS = \
+	-ferror-limit=5 \
+	-Werror \
+	-Wall \
+	-Wextra \
+	-Wwrite-strings \
+	-Winit-self \
+	-Wcast-align \
+	-Wcast-qual \
+	-Wold-style-cast \
+	-Wpointer-arith \
+	-Wstrict-aliasing \
+	-Wformat=2 \
+	-Wuninitialized \
+	-Wmissing-declarations \
+	-Woverloaded-virtual \
+	-Wnon-virtual-dtor \
+	-Wctor-dtor-privacy \
+	-Wno-long-long \
+	-Weffc++
+STD = -std=c++14 -pedantic
 INCLUDES = -I $(SOURCE_DIR) -I $(INCLUDE_DIR)
-LDLIBS = -lboost_unit_test_framework
+LDLIBS = -lsampleLibrary
 LDFLAGS = $(INCLUDES) $(STD) $(WARNING_FLAGS) $(DEBUG_FLAGS) -L $(LIB_DIR) $(LDLIBS)
 CXXFLAGS = $(INCLUDES) $(STD) $(WARNING_FLAGS) $(DEBUG_FLAGS)
 
 .PHONY : clean
 
 $(TARGET) : $(OBJ_FILES) $(EXTERNAL_OBJ_FILES)
-	$(CXX) $(LDFLAGS) $(OBJ_FILES) $(EXTERNAL_OBJ_FILES) -o $@ 
+	$(CXX) $(LDFLAGS) $(OBJ_FILES) $(EXTERNAL_OBJ_FILES) -o $@
 
-.SECONDEXPANSION:
-$(OBJ_DIR)/%.o : $$(shell find $(SOURCE_DIR) -type f -name %.cpp)
-	@mkdir -p $(OBJ_DIR)
-	@mkdir -p $(DEPEND_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-	$(CXX) $(CXXFLAGS) -MM $< > $(DEPEND_DIR)/$*.d
-	@sed -i '1s/^/$(OBJ_DIR)\//' $(DEPEND_DIR)/$*.d
+$(OBJ_DIR)/%.o : $(SOURCE_DIR)/%.cpp $(DEPEND_DIR)/%.d
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $(SOURCE_DIR)/$*.cpp -o $@
+
+$(DEPEND_DIR)/%.d : $(SOURCE_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -MM $< > $@
+	@sed -i "1s~^~$(subst $(DEPEND_DIR),$(OBJ_DIR),$(dir $@))~" $@
 
 clean :
 	$(RM) -r $(OBJ_DIR) $(DEPEND_DIR) $(TARGET)
 
--include $(subst $(OBJ_DIR)/,$(DEPEND_DIR)/,$(patsubst %.o,%.d,$(OBJ_FILES)))
+-include $(subst $(OBJ_DIR),$(DEPEND_DIR),$(patsubst %.o,%.d,$(OBJ_FILES)))
